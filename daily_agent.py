@@ -4,7 +4,7 @@ import datetime
 import yfinance as yf
 from google import genai
 
-client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+client = genai.Client(api_key=os.environ["AQ.Ab8RN6IeMe-QeuwGGiF8oW9QxRakqA0mfIyJnyZuHDt18SUp8A"])
 
 with open("memory.json", "r") as f:
     memory = json.load(f)
