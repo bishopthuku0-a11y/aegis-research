@@ -5,7 +5,7 @@ import feedparser
 import plotly.graph_objects as go
 import plotly.express as px
 from google import genai
-from google.genai.errors import ClientError
+from google.genai.errors import APIError, ServerError
 
 # 1. Command Center Setup
 st.set_page_config(page_title="Aegis Research", page_icon="🛡️", layout="wide")
