@@ -51,7 +51,7 @@ with col1:
             3. ⚖️ SKEPTICAL VERDICT & PITCH (Your human-like recommendation with concrete reasons)
             4. 📝 NEW LESSON TO REMEMBER (1 short rule to add to your memory)
             """
-            response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            response = client.models.generate_content(model="gemini-4-hydrogen",contents=prompt)
             st.session_state["last_analysis"] = response.text
 
 with col2:
