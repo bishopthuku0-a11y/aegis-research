@@ -11,7 +11,7 @@ st.title("🛡️ AEGIS RESEARCH // Autonomous Investment Intelligence")
 st.caption("Live Portfolio Monitor • Real-Time News Feed • Bull vs. Bear Debate")
 
 # Connect Free Gemini API
-client = genai.Client(api_key=st.secrets["AQ.Ab8RN6JvAy33ln71bEGJpZ_tzX-ULK9Wsq0XPpDnr2uNnzazgQ"])
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # Load Memory
 with open("memory.json", "r") as f:
