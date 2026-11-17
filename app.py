@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import json
 from google import genai
+from google.genai.errors import ClientError
 
 # 1. Command Center Setup
 st.set_page_config(page_title="Aegis Research", page_icon="🛡️", layout="wide")
@@ -51,8 +52,14 @@ with col1:
             3. ⚖️ SKEPTICAL VERDICT & PITCH (Your human-like recommendation with concrete reasons)
             4. 📝 NEW LESSON TO REMEMBER (1 short rule to add to your memory)
             """
-            response = client.models.generate_content(model="gemini-4-hydrogen",contents=prompt)
-            st.session_state["last_analysis"] = response.text
+            try:
+                response = client.models.generate_content(
+                    model="gemini-4-hydrogen",
+                    contents=prompt
+                )
+                st.session_state["last_analysis"] = response.text
+            except ClientError as e:
+                st.error(f"API Error ({e.code}): {e.message}")
 
 with col2:
     st.subheader("⚖️ Aegis Research Output")
