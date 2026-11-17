@@ -77,7 +77,6 @@ def fetch_market_data(ticker_list):
                 prev = float(df["Close"].iloc[-2]) if len(df) >= 2 else latest
                 chg = ((latest - prev) / prev) * 100 if prev else 0.0
                 metrics[sym] = (latest, chg)
-                # Normalize to % return from start of 3-month window
                 hist_df[sym] = ((df["Close"] / df["Close"].iloc[0]) - 1) * 100
         except Exception:
             metrics[sym] = (0.0, 0.0)
@@ -177,25 +176,43 @@ with tab_generator:
                 f"User request: {user_prompt}"
             )
             
-            stream_response = None
+            candidates = ["gemini-4-hydrogen", "gemini-3.8-flash"]
+            try:
+                for m in client.models.list():
+                    m_id = m.name.replace("models/", "")
+                    if ("hydrogen" in m_id or "flash" in m_id) and m_id not in candidates:
+                        candidates.append(m_id)
+            except Exception:
+                pass
+
+            stream_iter = None
+            first_chunk = None
             active_model = None
-            for model_id in ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"]:
+            last_error = ""
+
+            for model_id in candidates[:5]:
                 try:
                     st.write(f"Connecting to `{model_id}`...")
-                    stream_response = client.models.generate_content_stream(
+                    raw_stream = client.models.generate_content_stream(
                         model=model_id,
                         contents=full_prompt
                     )
+                    it = iter(raw_stream)
+                    first_chunk = next(it)
+                    stream_iter = it
                     active_model = model_id
                     break
                 except Exception as err:
+                    last_error = str(err)
                     st.write(f"`{model_id}` unavailable, switching...")
 
-            if stream_response:
+            if stream_iter is not None:
                 status.update(label=f"Connected via {active_model}!", state="complete", expanded=False)
                 
                 def typewriter():
-                    for chunk in stream_response:
+                    if first_chunk and first_chunk.text:
+                        yield first_chunk.text
+                    for chunk in stream_iter:
                         if chunk.text:
                             yield chunk.text
                             time.sleep(0.012)
@@ -205,4 +222,4 @@ with tab_generator:
                 st.toast("Analysis complete!", icon="✅")
             else:
                 status.update(label="Connection failed", state="error")
-                st.error("All Gemini fallback models failed. Verify your GEMINI_API_KEY in Streamlit Secrets.")
+                st.error(f"Models unavailable right now ({last_error[:140]}). Wait 10 seconds and try again.")
