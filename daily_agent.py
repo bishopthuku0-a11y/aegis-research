@@ -42,8 +42,8 @@ report = response.text
 
 if "NEW_LESSON:" in report:
     parts = report.split("NEW_LESSON:", 1)
-   clean_report = parts[0].strip()
-new_lesson = parts[1].strip().lstrip("*:- ")
+    clean_report = parts[0].strip()
+    new_lesson = parts[1].strip().lstrip("*:- ")
     if new_lesson:
         memory["lessons_learned"].append(new_lesson)
         memory["lessons_learned"] = memory["lessons_learned"][-15:]
