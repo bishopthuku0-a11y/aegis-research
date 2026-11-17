@@ -7,7 +7,15 @@
   "lessons_learned": [
     "Always check interest rate trends before recommending utility stocks.",
     "Require concrete earnings or contract proof before pitching a new ticker.",
-    "Scrutinize policy and hyperscaler capex shifts simultaneously, as political mandates shifting grid interconnection costs directly impact smart-grid equipment valuations before hitting regulated utilities."
+    "Scrutinize policy and hyperscaler capex shifts simultaneously, as political mandates shifting grid interconnection costs directly impact smart-grid equipment valuations before hitting regulated utilities.",
+    "When bipartisan policy explicitly targets hyperscaler infrastructure subsidies, immediately derate high-multiple grid equipment suppliers ahead of capex order book revisions."
   ],
-  "past_pitches": []
+  "past_pitches": [
+    {
+      "date": "2026-11-17",
+      "action": "TRIM",
+      "ticker": "GRID",
+      "entry_price": 156.14
+    }
+  ]
 }
