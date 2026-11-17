@@ -1,6 +1,7 @@
 import streamlit as st
 import yfinance as yf
 import json
+import feedparser
 import plotly.graph_objects as go
 import plotly.express as px
 from google import genai
@@ -82,10 +83,23 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Live Breaking News Fetcher (Free Google News RSS)
+def get_live_market_news(queries=["XLU utilities ETF", "GRID smart grid ETF", "UTES ETF", "10 year treasury yield"]):
+    headlines = []
+    for q in queries:
+        try:
+            url = f"https://google.com{q.replace(' ', '+')}&hl=en-US&gl=US&ceid=US:en"
+            feed = feedparser.parse(url)
+            for entry in feed.entries[:2]:
+                headlines.append(f"- [{q}] {entry.title} ({entry.get('published', 'Recent')})")
+        except Exception:
+            continue
+    return "\n".join(headlines) if headlines else "No major breaking headlines fetched."
+
 # Header with Live Pulse Indicator
-st.markdown('<div class="status-badge"><span class="pulse-dot"></span>SYSTEM ONLINE • GEMINI 4 HYDROGEN ENGINE</div>', unsafe_allow_html=True)
+st.markdown('<div class="status-badge"><span class="pulse-dot"></span>SYSTEM ONLINE • GEMINI 4 HYDROGEN + LIVE NEWS FEED</div>', unsafe_allow_html=True)
 st.title("🛡️ AEGIS RESEARCH // Autonomous Intelligence")
-st.caption("Live Portfolio Telemetry • Interactive Market Analytics • Bull vs. Bear Debate")
+st.caption("Live Portfolio Telemetry • Real-Time News Research • Plain-English Action Signals")
 
 # Connect Free Gemini API
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
@@ -94,19 +108,37 @@ client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 with open("memory.json", "r") as f:
     memory = json.load(f)
 
-# 3. Sidebar: Live Portfolio Cards, Allocation Donut & Memory Bank
+# 3. Sidebar: Live Portfolio Cards, Macro Rate Watch & Memory Bank
 with st.sidebar:
     st.header("📊 Core Portfolio")
+    live_prices_summary = []
     for ticker, weight in memory["portfolio"].items():
         info = yf.Ticker(ticker).fast_info
         price = info["last_price"]
         prev_close = info["previous_close"]
         pct_change = ((price - prev_close) / prev_close) * 100
+        live_prices_summary.append(f"{ticker}: ${price:.2f} ({pct_change:+.2f}%)")
         st.metric(
             label=f"{ticker} • {int(weight*100)}% Target",
             value=f"${price:.2f}",
             delta=f"{pct_change:+.2f}%"
         )
+
+    # Macro Interest Rate Indicator (10-Year US Treasury Yield)
+    try:
+        tnx_info = yf.Ticker("^TNX").fast_info
+        tnx_yield = tnx_info["last_price"]
+        tnx_prev = tnx_info["previous_close"]
+        tnx_delta = tnx_yield - tnx_prev
+        st.metric(
+            label="🏦 10-Yr Treasury Yield (Rate Watch)",
+            value=f"{tnx_yield:.2f}%",
+            delta=f"{tnx_delta:+.2f}%",
+            delta_color="inverse"
+        )
+        macro_context = f"10-Year US Treasury Yield: {tnx_yield:.2f}% ({tnx_delta:+.2f}%)"
+    except Exception:
+        macro_context = "10-Year US Treasury Yield: Unavailable"
 
     # Interactive Donut Chart for Portfolio Weights
     fig_donut = px.pie(
@@ -117,7 +149,7 @@ with st.sidebar:
     )
     fig_donut.update_layout(
         showlegend=True,
-        height=210,
+        height=200,
         margin=dict(t=10, b=10, l=10, r=10),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
@@ -166,30 +198,38 @@ st.plotly_chart(fig_line, use_container_width=True)
 
 st.divider()
 
-# 5. Main Area: Proactive Pitch & Critical Thinking Debate
+# 5. Main Area: Proactive Pitch & Plain-English Research Engine
 col1, col2 = st.columns([1, 1.2])
 
 with col1:
-    st.subheader("💡 Desk Query & Thesis Generator")
+    st.subheader("💡 Ask Aegis Research")
     user_query = st.text_area(
-        "Ask about your ETFs or request a new market pitch:",
-        "Analyze XLU, GRID, and UTES right now and pitch 1 complementary idea.",
+        "Ask why your ETFs are moving or if it is safe to buy right now:",
+        "Why are GRID and UTES moving right now, and should I buy or wait?",
         height=130
     )
     
-    if st.button("🚀 Run Critical Analysis", type="primary", use_container_width=True):
-        with st.spinner("Aegis Bull and Bear desks are debating..."):
+    if st.button("🚀 Run Live News & Market Research", type="primary", use_container_width=True):
+        with st.spinner("Scanning live financial news & debating risks..."):
+            live_news = get_live_market_news()
             prompt = f"""
-            You are Aegis Research, an institutional-grade, critical-thinking investment analyst.
-            User Portfolio: {memory['portfolio']}
-            Your Past Lessons Learned (MUST FOLLOW): {memory['lessons_learned']}
-            User Request: {user_query}
+            You are Aegis Research, a friendly, super-clear investment mentor helping a complete beginner grow money safely.
+            Avoid all confusing Wall Street jargon. Explain everything in plain, everyday English using the live market data and breaking news below.
             
-            Respond strictly in 4 sections:
-            1. 🐂 THE BULL CASE (Why this works)
-            2. 🐻 THE BEAR CASE (How this could fail / risks)
-            3. ⚖️ SKEPTICAL VERDICT & PITCH (Your human-like recommendation with concrete reasons)
-            4. 📝 NEW LESSON TO REMEMBER (1 short rule to add to your memory)
+            User Portfolio & Live Prices: {', '.join(live_prices_summary)}
+            Macro Interest Rate Watch: {macro_context}
+            Past Rules to Obey: {memory['lessons_learned']}
+            
+            Live Breaking News Headlines Today:
+            {live_news}
+            
+            User Question: {user_query}
+            
+            Respond strictly in 4 simple sections:
+            1. 🚦 ACTION SIGNAL: Pick ONE (🟢 SAFE TO BUY, 🟡 WAIT & HOLD CASH, or 🔴 AVOID / TOO RISKY) and explain why in 2 short sentences based on today's news and rates.
+            2. 📰 WHAT IS HAPPENING RIGHT NOW: Explain why the prices are moving today using the live headlines in simple words.
+            3. ⚠️ BIGGEST RISK TO WATCH: Explain what could go wrong clearly so the user protects their money.
+            4. 📝 NEW LESSON TO REMEMBER: Write 1 short, beginner-friendly takeaway rule for memory.
             """
             try:
                 response = client.models.generate_content(
@@ -197,6 +237,7 @@ with col1:
                     contents=prompt
                 )
                 st.session_state["last_analysis"] = response.text
+                st.session_state["last_news"] = live_news
             except ClientError as e:
                 st.error(f"API Error ({e.code}): {e.message}")
 
@@ -204,6 +245,8 @@ with col2:
     st.subheader("⚖️ Aegis Research Output")
     if "last_analysis" in st.session_state:
         st.markdown(st.session_state["last_analysis"])
+        with st.expander("🗞️ View Live Headlines Aegis Scanned"):
+            st.text(st.session_state.get("last_news", ""))
         if st.button("💾 Save New Lesson to Memory"):
             new_rule = st.session_state["last_analysis"].split("NEW LESSON TO REMEMBER")[-1].strip(": \n*")
             memory["lessons_learned"].append(new_rule)
@@ -212,4 +255,3 @@ with col2:
             st.success("Memory updated! Reloading...")
             st.rerun()
     else:
-        st.info("System standing by. Click **Run Critical Analysis** to generate an institutional briefing.")
