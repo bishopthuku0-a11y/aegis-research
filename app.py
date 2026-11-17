@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import json
 import os
+import time
 from google import genai
 
 # 1. Command Center Setup
@@ -15,6 +16,18 @@ client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 # Load Memory
 with open("memory.json", "r") as f:
     memory = json.load(f)
+
+# Helper: Automatic retry if Google servers experience a brief spike
+def ask_aegis(prompt_text):
+    models_to_try = ["gemini-3.8-flash", "gemini-3.8-flash-lite"]
+    for model_name in models_to_try:
+        for attempt in range(2):
+            try:
+                res = client.models.generate_content(model=model_name, contents=prompt_text)
+                return res.text
+            except Exception as e:
+                time.sleep(2)
+    return "⚠️ Google AI servers are temporarily busy right now. Please wait 10 seconds and click Run Critical Analysis again."
 
 # 2. Sidebar: Live Portfolio, Headlines & Memory Bank
 live_headlines = []
@@ -59,8 +72,7 @@ with col1:
             3. ⚖️ SKEPTICAL VERDICT & PITCH (Your human-like recommendation with concrete reasons)
             4. 📝 NEW LESSON TO REMEMBER (1 short rule to add to your memory)
             """
-            response = client.models.generate_content(model="gemini-3.8-flash", contents=prompt)
-            st.session_state["last_analysis"] = response.text
+            st.session_state["last_analysis"] = ask_aegis(prompt)
 
     if os.path.exists("latest_briefing.md"):
         st.divider()
