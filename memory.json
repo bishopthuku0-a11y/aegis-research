@@ -1,8 +1,13 @@
 {
-  "portfolio": {"XLU": 0.50, "GRID": 0.30, "UTES": 0.20},
+  "portfolio": {
+    "XLU": 0.5,
+    "GRID": 0.3,
+    "UTES": 0.2
+  },
   "lessons_learned": [
     "Always check interest rate trends before recommending utility stocks.",
-    "Require concrete earnings or contract proof before pitching a new ticker."
+    "Require concrete earnings or contract proof before pitching a new ticker.",
+    "Scrutinize policy and hyperscaler capex shifts simultaneously, as political mandates shifting grid interconnection costs directly impact smart-grid equipment valuations before hitting regulated utilities."
   ],
   "past_pitches": []
 }
