@@ -13,20 +13,15 @@ st.set_page_config(page_title="Aegis Research", page_icon="🛡️", layout="wid
 # 2. Custom CSS: Ambient Dark Background, Glassmorphism & Pulse Animations
 st.markdown("""
 <style>
-    /* Deep Obsidian Ambient Background */
     .stApp {
         background: radial-gradient(circle at 15% 15%, #111927 0%, #090c10 55%, #050709 100%);
         color: #e6edf3;
     }
-    
-    /* Frosted Glass Sidebar */
     [data-testid="stSidebar"] {
         background: rgba(13, 17, 23, 0.75);
         backdrop-filter: blur(14px);
         border-right: 1px solid rgba(56, 189, 248, 0.15);
     }
-
-    /* Glowing Metric Cards */
     [data-testid="stMetric"] {
         background: rgba(22, 27, 34, 0.65);
         border: 1px solid rgba(56, 189, 248, 0.2);
@@ -39,8 +34,6 @@ st.markdown("""
         border-color: rgba(56, 189, 248, 0.6);
         box-shadow: 0 6px 20px rgba(56, 189, 248, 0.12);
     }
-
-    /* Animated Live Status Pulse */
     @keyframes pulse-glow {
         0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
         70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
@@ -66,8 +59,6 @@ st.markdown("""
         border-radius: 50%;
         animation: pulse-glow 2s infinite;
     }
-
-    /* Sleek Primary Button Glow */
     .stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
         border: none;
@@ -255,3 +246,4 @@ with col2:
             st.success("Memory updated! Reloading...")
             st.rerun()
     else:
+        st.info("System standing by. Click **Run Live News & Market Research** to scan today's headlines.")
