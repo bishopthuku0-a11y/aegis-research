@@ -1,0 +1,24 @@
+name: Aegis Daily Run
+on:
+  schedule:
+    - cron: '0 5 * * 1-5'
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install google-genai yfinance
+      - env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python daily_agent.py
+      - run: |
+          git config user.name "Aegis Bot"
+          git config user.email "bot@://github.com"
+          git add memory.json latest_briefing.md
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Aegis update" && git push)
