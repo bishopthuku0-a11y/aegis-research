@@ -1,96 +1,135 @@
-import streamlit as st
-import yfinance as yf
-import json
 import os
+import json
 import time
+import datetime
+import yfinance as yf
 from google import genai
 
-# 1. Command Center Setup
-st.set_page_config(page_title="Aegis Research", page_icon="🛡️", layout="wide")
-st.title("🛡️ AEGIS RESEARCH // Autonomous Investment Intelligence")
-st.caption("Live Portfolio Monitor • Real-Time News Feed • Bull vs. Bear Debate")
+client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
-# Connect Free Gemini API
-client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-
-# Load Memory
-with open("memory.json", "r") as f:
-    memory = json.load(f)
-
-# Helper: Automatic retry if Google servers experience a brief spike
 def ask_aegis(prompt_text):
-    models_to_try = ["gemini-3.8-flash", "gemini-3.8-flash-lite"]
-    for model_name in models_to_try:
-        for attempt in range(2):
+    for model_name in ["gemini-3.8-flash", "gemini-3.8-flash-lite"]:
+        for attempt in range(3):
             try:
                 res = client.models.generate_content(model=model_name, contents=prompt_text)
                 return res.text
             except Exception as e:
-                time.sleep(2)
-    return "⚠️ Google AI servers are temporarily busy right now. Please wait 10 seconds and click Run Critical Analysis again."
+                print(f"Attempt {attempt+1} on {model_name} busy: {e}")
+                time.sleep(5)
+    raise RuntimeError("All Gemini models temporarily busy.")
 
-# 2. Sidebar: Live Portfolio, Headlines & Memory Bank
+with open("memory.json", "r") as f:
+    memory = json.load(f)
+
+if "past_pitches" not in memory:
+    memory["past_pitches"] = []
+
+# 1. Fetch Live Prices & Today's Financial Headlines
+market_snapshot = {}
+current_prices = {}
 live_headlines = []
-with st.sidebar:
-    st.header("📊 Core Portfolio (50/30/20)")
-    for ticker, weight in memory["portfolio"].items():
-        t = yf.Ticker(ticker)
-        price = t.fast_info["last_price"]
-        st.metric(label=f"{ticker} ({int(weight*100)}%)", value=f"${price:.2f}")
-        for article in (t.news or [])[:2]:
-            title = article.get("content", {}).get("title") or article.get("title")
-            if title:
-                live_headlines.append(f"[{ticker}] {title}")
-    
-    st.divider()
-    st.header("🧬 Learned Rules (Memory)")
-    for i, lesson in enumerate(memory["lessons_learned"], 1):
-        st.info(f"{i}. {lesson}")
 
-# 3. Main Area: Live Briefing + Interactive Desk
-col1, col2 = st.columns([1, 1.2])
+for ticker in memory["portfolio"].keys():
+    t = yf.Ticker(ticker)
+    price = float(t.fast_info["last_price"])
+    prev_close = float(t.fast_info["previous_close"])
+    change_pct = ((price - prev_close) / prev_close) * 100
+    current_prices[ticker] = round(price, 2)
+    market_snapshot[ticker] = f"${price:.2f} ({change_pct:+.2f}%)"
+    for article in (t.news or [])[:3]:
+        title = article.get("content", {}).get("title") or article.get("title")
+        if title:
+            live_headlines.append(f"[{ticker}] {title}")
 
-with col1:
-    st.subheader("💡 Desk Query & Thesis Generator")
-    user_query = st.text_area(
-        "Ask about your ETFs or request a new market pitch:",
-        "Analyze XLU, GRID, and UTES with today's news and pitch 1 complementary idea."
-    )
-    
-    if st.button("🚀 Run Critical Analysis", type="primary"):
-        with st.spinner("Aegis Bull and Bear desks are debating..."):
-            prompt = f"""
-            You are Aegis Research, an institutional-grade, critical-thinking investment analyst.
-            User Portfolio: {memory['portfolio']}
-            Today's Live Headlines: {live_headlines}
-            Your Past Lessons Learned (MUST FOLLOW): {memory['lessons_learned']}
-            User Request: {user_query}
-            
-            Respond strictly in 4 sections:
-            1. 🐂 THE BULL CASE (Why this works)
-            2. 🐻 THE BEAR CASE (How this could fail / risks)
-            3. ⚖️ SKEPTICAL VERDICT & PITCH (Your human-like recommendation with concrete reasons)
-            4. 📝 NEW LESSON TO REMEMBER (1 short rule to add to your memory)
-            """
-            st.session_state["last_analysis"] = ask_aegis(prompt)
+# 2. Grade Past Pitches Against Real Market Prices
+scoreboard = []
+for pitch in memory["past_pitches"][-10:]:
+    p_ticker = pitch.get("ticker", "GRID")
+    entry_price = pitch.get("entry_price")
+    try:
+        latest_p = current_prices.get(p_ticker) or float(yf.Ticker(p_ticker).fast_info["last_price"])
+        if entry_price and entry_price > 0:
+            perf_pct = ((latest_p - entry_price) / entry_price) * 100
+            pitch["latest_price"] = round(latest_p, 2)
+            pitch["return_pct"] = round(perf_pct, 2)
+            scoreboard.append(
+                f"{pitch['date']} | Call: {pitch['action']} {p_ticker} @ ${entry_price:.2f} -> Now ${latest_p:.2f} ({perf_pct:+.2f}%)"
+            )
+    except Exception:
+        pass
 
-    if os.path.exists("latest_briefing.md"):
-        st.divider()
-        with st.expander("📰 Read Latest 8:00 AM Autonomous Briefing"):
-            with open("latest_briefing.md", "r") as bf:
-                st.markdown(bf.read())
+today_dt = datetime.datetime.now()
+is_friday = today_dt.weekday() == 4
+pruning_instruction = (
+    "TODAY IS FRIDAY (WEEKLY STRATEGY REVIEW): Review all rules in 'Past Lessons Learned' alongside your Track Record. "
+    "Merge duplicates, delete rules that led to bad calls, and output a refined, ranked list of your top 8 rules."
+    if is_friday else ""
+)
 
-with col2:
-    st.subheader("⚖️ Aegis Research Output")
-    if "last_analysis" in st.session_state:
-        st.markdown(st.session_state["last_analysis"])
-        if st.button("💾 Save New Lesson to Memory"):
-            new_rule = st.session_state["last_analysis"].split("NEW LESSON TO REMEMBER")[-1].strip(": \n*")
-            if new_rule:
-                memory["lessons_learned"].append(new_rule)
-                with open("memory.json", "w") as f:
-                    json.dump(memory, f, indent=2)
-                st.success("Memory updated! Reloading...")
-                st.rerun()
+# 3. Critical Thinking, Self-Grading & Evolution Prompt
+prompt = f"""
+You are Aegis Research, a self-improving institutional investment analyst.
+Current Portfolio & Latest Prices: {market_snapshot}
+Today's Live Market Headlines: {live_headlines}
+Your Real-World Track Record (Past Calls vs. Actual Prices): {scoreboard if scoreboard else "No past calls graded yet."}
+Your Past Lessons Learned (MUST FOLLOW): {memory['lessons_learned']}
+{pruning_instruction}
+
+Critically evaluate your past track record, today's prices, and live headlines. Write a sharp daily report:
+1. 🛡️ AEGIS RESEARCH // DAILY BRIEFING
+2. 📈 SELF-AUDIT & TRACK RECORD: Briefly grade your past calls above (what worked, what failed, and why).
+3. 📊 PORTFOLIO PULSE: Key moves in XLU, GRID, and UTES and what today's headlines mean.
+4. 🐂 vs 🐻 CRITICAL DEBATE: One major opportunity vs. one major risk based on today's news and prices.
+5. 💡 PROACTIVE PITCH: Suggest 1 concrete action (e.g., BUY <TICKER>, TRIM <TICKER>, or HOLD GRID) with hard reasoning.
+
+At the very end, output these exact machine-readable lines so your memory system updates itself:
+PITCH_ACTION: <HOLD or BUY or TRIM>
+PITCH_TICKER: <Single valid US stock/ETF ticker, e.g., GRID, XLU, UTES, PWR, URNM>
+NEW_LESSON: <One sharp rule capturing what to repeat or avoid based on your self-audit>
+"""
+
+report = ask_aegis(prompt)
+
+# 4. Parse Self-Audit Outputs & Update Permanent Memory
+clean_lines = []
+pitch_action = "HOLD"
+pitch_ticker = "GRID"
+new_lesson = ""
+
+for line in report.splitlines():
+    if line.startswith("PITCH_ACTION:"):
+        pitch_action = line.split(":", 1).strip().upper()
+    elif line.startswith("PITCH_TICKER:"):
+        pitch_ticker = line.split(":", 1).strip().upper().replace("$", "")
+    elif line.startswith("NEW_LESSON:"):
+        new_lesson = line.split(":", 1).strip().lstrip("*:- ")
     else:
-        st.write("Click **Run Critical Analysis** to wake up Aegis Research.")
+        clean_lines.append(line)
+
+clean_report = "\n".join(clean_lines).strip()
+
+# Log today's call into past_pitches for future grading
+try:
+    tracked_price = current_prices.get(pitch_ticker) or float(yf.Ticker(pitch_ticker).fast_info["last_price"])
+    memory["past_pitches"].append({
+        "date": today_dt.strftime("%Y-%m-%d"),
+        "action": pitch_action,
+        "ticker": pitch_ticker,
+        "entry_price": round(tracked_price, 2)
+    })
+    memory["past_pitches"] = memory["past_pitches"][-30:]
+except Exception:
+    pass
+
+# Save new learned rule
+if new_lesson:
+    memory["lessons_learned"].append(new_lesson)
+    memory["lessons_learned"] = memory["lessons_learned"][-12:]
+
+with open("memory.json", "w") as f:
+    json.dump(memory, f, indent=2)
+
+# 5. Save Briefing Directly to GitHub
+today_str = today_dt.strftime("%Y-%m-%d %H:%M UTC")
+with open("latest_briefing.md", "w") as f:
+    f.write(f"# 🛡️ Aegis Research Daily Briefing ({today_str})\n\n{clean_report}\n")
