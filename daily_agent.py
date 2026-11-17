@@ -37,7 +37,7 @@ Analyze the live prices and news headlines critically, then write a structured d
 5. NEW_LESSON: End with one single sentence starting with 'NEW_LESSON:' capturing a rule to remember for future checks.
 """
 
-response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+response = client.models.generate_content(model="gemini-3.8-flash", contents=prompt)
 report = response.text
 
 if "NEW_LESSON:" in report:
