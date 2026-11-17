@@ -229,7 +229,17 @@ with col1:
                 )
                 st.session_state["last_analysis"] = response.text
                 st.session_state["last_news"] = live_news
-            except ClientError as e:
+            except ServerError:
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-3.8-flash",
+                        contents=prompt
+                    )
+                    st.session_state["last_analysis"] = response.text
+                    st.session_state["last_news"] = live_news
+                except APIError as e:
+                    st.error(f"Google Servers Busy ({e.code}): Please try again in 30 seconds.")
+            except APIError as e:
                 st.error(f"API Error ({e.code}): {e.message}")
 
 with col2:
@@ -239,11 +249,3 @@ with col2:
         with st.expander("🗞️ View Live Headlines Aegis Scanned"):
             st.text(st.session_state.get("last_news", ""))
         if st.button("💾 Save New Lesson to Memory"):
-            new_rule = st.session_state["last_analysis"].split("NEW LESSON TO REMEMBER")[-1].strip(": \n*")
-            memory["lessons_learned"].append(new_rule)
-            with open("memory.json", "w") as f:
-                json.dump(memory, f, indent=2)
-            st.success("Memory updated! Reloading...")
-            st.rerun()
-    else:
-        st.info("System standing by. Click **Run Live News & Market Research** to scan today's headlines.")
