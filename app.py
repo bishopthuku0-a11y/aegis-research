@@ -17,14 +17,14 @@ client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 with open("memory.json", "r") as f:
     memory = json.load(f)
 
-# Helper: Auto-discovers working Gemini models on your key & retries safely
+# Helper: Uses gemini-4-hydrogen first with automatic fallback
 def ask_aegis(prompt_text):
     last_err = ""
-    candidates = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash"]
+    candidates = ["gemini-4-hydrogen", "gemini-3.8-flash", "gemini-3.8-flash-lite"]
     try:
         for m in client.models.list():
             name = m.name.replace("models/", "")
-            if "flash" in name and name not in candidates:
+            if ("hydrogen" in name or "flash" in name) and name not in candidates:
                 candidates.append(name)
     except Exception:
         pass
