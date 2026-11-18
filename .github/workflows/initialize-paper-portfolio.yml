@@ -3,6 +3,17 @@ name: Aegis Portfolio Initialization
 
 on:
   workflow_dispatch:
+    inputs:
+      market_date:
+        description: "Exact US market date for opening prices"
+        required: true
+        default: "2026-11-17"
+        type: string
+      confirm_initialization:
+        description: "Confirm creation of the $10,000 paper portfolio"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -12,6 +23,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Verify development branch
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          if [ "$BRANCH" != "aegis-simulation-rebuild" ]; then
+            echo "ERROR: Initialization is only allowed on aegis-simulation-rebuild."
+            exit 1
+          fi
+
+      - name: Require explicit confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm_initialization }}
+        run: |
+          if [ "$CONFIRM" != "true" ]; then
+            echo "ERROR: Portfolio initialization was not confirmed."
+            exit 1
+          fi
+
       - name: Checkout development branch
         uses: actions/checkout@v4
 
@@ -20,21 +49,32 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install market data dependency
         run: |
           python -m pip install --upgrade pip
-          pip install yfinance
+          python -m pip install yfinance
 
-      - name: Initialize virtual portfolio
+      - name: Protect existing ledger
         run: |
-          python portfolio_initializer.py
+          if [ -e simulation_ledger.json ]; then
+            echo "ERROR: simulation_ledger.json already exists."
+            exit 1
+          fi
 
-      - name: Commit simulation ledger
+      - name: Initialize verified paper portfolio
+        env:
+          MARKET_DATE: ${{ inputs.market_date }}
+        run: |
+          python portfolio_initializer.py \
+            --date "$MARKET_DATE" \
+            --confirm
+
+      - name: Commit initial ledger
         run: |
           git config user.name "Aegis Bot"
           git config user.email "aegis-bot@users.noreply.github.com"
-          git add simulation_ledger.json
+          git add -- simulation_ledger.json
           git diff --cached --quiet || (
-            git commit -m "Initialize Aegis virtual portfolio"
-            git push
+            git commit -m "Initialize Aegis paper portfolio"
+            git push origin HEAD:aegis-simulation-rebuild
           )
