@@ -4,7 +4,7 @@ name: Aegis Portfolio Initialization
 on:
   push:
     branches:
-      - aegis-simulation-rebuild
+      - main
     paths:
       - ".github/workflows/initialize-paper-portfolio.yml"
       - "portfolio_initializer.py"
@@ -19,16 +19,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Verify development branch
+      - name: Verify main branch
         env:
           BRANCH: ${{ github.ref_name }}
         run: |
-          if [ "$BRANCH" != "aegis-simulation-rebuild" ]; then
-            echo "ERROR: Initialization is only allowed on aegis-simulation-rebuild."
+          if [ "$BRANCH" != "main" ]; then
+            echo "ERROR: Initialization is only allowed on main."
             exit 1
           fi
 
-      - name: Checkout development branch
+      - name: Checkout main
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -61,5 +61,5 @@ jobs:
           git add -- simulation_ledger.json
           git diff --cached --quiet || (
             git commit -m "Initialize Aegis paper portfolio"
-            git push origin HEAD:aegis-simulation-rebuild
+            git push origin HEAD:main
           )
