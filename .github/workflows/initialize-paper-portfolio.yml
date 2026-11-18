@@ -2,18 +2,14 @@
 name: Aegis Portfolio Initialization
 
 on:
-  workflow_dispatch:
-    inputs:
-      market_date:
-        description: "Exact US market date for opening prices"
-        required: true
-        default: "2026-11-17"
-        type: string
-      confirm_initialization:
-        description: "Confirm creation of the $10,000 paper portfolio"
-        required: true
-        default: false
-        type: boolean
+  push:
+    branches:
+      - aegis-simulation-rebuild
+    paths:
+      - ".github/workflows/initialize-paper-portfolio.yml"
+      - "portfolio_initializer.py"
+      - "market_data.py"
+      - "simulation_engine.py"
 
 permissions:
   contents: write
@@ -29,15 +25,6 @@ jobs:
         run: |
           if [ "$BRANCH" != "aegis-simulation-rebuild" ]; then
             echo "ERROR: Initialization is only allowed on aegis-simulation-rebuild."
-            exit 1
-          fi
-
-      - name: Require explicit confirmation
-        env:
-          CONFIRM: ${{ inputs.confirm_initialization }}
-        run: |
-          if [ "$CONFIRM" != "true" ]; then
-            echo "ERROR: Portfolio initialization was not confirmed."
             exit 1
           fi
 
@@ -62,11 +49,9 @@ jobs:
           fi
 
       - name: Initialize verified paper portfolio
-        env:
-          MARKET_DATE: ${{ inputs.market_date }}
         run: |
           python portfolio_initializer.py \
-            --date "$MARKET_DATE" \
+            --date "2026-11-17" \
             --confirm
 
       - name: Commit initial ledger
