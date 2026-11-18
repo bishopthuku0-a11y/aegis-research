@@ -1,26 +1,22 @@
-AEGIS MARKET DATA PATCH
+AEGIS PORTFOLIO INITIALIZER PATCH
 
 Files:
-- market_data.py (repository root)
-- tests/test_market_data.py (inside existing tests/ directory)
+- portfolio_initializer.py (repository root)
+- tests/test_portfolio_initializer.py (inside existing tests/ folder)
 
-Purpose:
-- Fetch the exact requested daily closing bar using yfinance.
-- Preserve the exchange timezone timestamp attached to the daily bar.
-- Record the retrieval time separately.
-- Reject missing dates, timezone-naive bars, invalid prices, and provider errors.
-- Fetch a symbol batch atomically: if any requested ticker fails, no partial
-  quote dictionary is returned.
+This connects the existing market_data.py adapter to simulation_engine.py.
+It requires an explicit market date, fetches all required opening quotes as
+one all-or-nothing batch, creates a PAPER_ONLY ledger, and refuses to overwrite
+an existing ledger by default. It never submits broker orders.
 
-This patch does not initialize the $10,000 portfolio or change the daily agent.
-It only supplies a date-specific quote adapter. Yahoo Finance data availability
-and accuracy are not guaranteed; Aegis must still treat provider failures as
-DATA FAILURE and must not substitute a different date.
+Do not run initialization until the chosen date and fetched XLU, GRID, UTES
+quotes have been reviewed. Synthetic quotes in tests are not market prices.
 
-The tests use synthetic local fixtures only. They do not contact Yahoo Finance.
+After installing and testing, a deliberate manual initialization command is:
+  python portfolio_initializer.py --date YYYY-MM-DD --confirm
 
-Run:
+The date must be replaced with the intended actual market date. The script
+will fail closed if Yahoo Finance does not return exact-date bars.
+
+Run all tests from repository root:
   python -m unittest discover -s tests -v
-
-Required runtime dependency: yfinance (already installed by the current
-Aegis Daily Run workflow). pandas is installed as a yfinance dependency.
