@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "simulation_type": "PAPER_ONLY",
+  "currency": "USD",
+  "start_date": "2026-11-17",
+  "initial_capital": 10000.0,
+  "cash": 0.0,
+  "allocations": {
+    "XLU": 0.5,
+    "GRID": 0.3,
+    "UTES": 0.2
+  },
+  "holdings": {
+    "XLU": {
+      "quantity": 115.15431207,
+      "average_cost": 43.419998,
+      "total_cost_basis": 5000.0,
+      "market_price": 43.419998,
+      "market_value": 5000.0,
+      "price_timestamp": "2026-11-17T00:00:00-05:00",
+      "price_source": "Yahoo Finance via yfinance"
+    },
+    "GRID": {
+      "quantity": 19.33612707,
+      "average_cost": 155.149994,
+      "total_cost_basis": 3000.0,
+      "market_price": 155.149994,
+      "market_value": 3000.0,
+      "price_timestamp": "2026-11-17T00:00:00-05:00",
+      "price_source": "Yahoo Finance via yfinance"
+    },
+    "UTES": {
+      "quantity": 26.32618104,
+      "average_cost": 75.970001,
+      "total_cost_basis": 2000.0,
+      "market_price": 75.970001,
+      "market_value": 2000.0,
+      "price_timestamp": "2026-11-17T00:00:00-05:00",
+      "price_source": "Yahoo Finance via yfinance"
+    }
+  },
+  "transactions": [
+    {
+      "transaction_id": "TX000001",
+      "date": "2026-11-17",
+      "timestamp": "2026-11-17T00:00:00-05:00",
+      "ticker": "XLU",
+      "side": "BUY",
+      "quantity": 115.15431207,
+      "reference_price": 43.419998,
+      "fill_price": 43.419998,
+      "notional": 5000.0,
+      "fee": 0.0,
+      "slippage_bps": 0.0,
+      "reason": "Initial target allocation",
+      "source": "Yahoo Finance via yfinance",
+      "realized_pnl": 0.0
+    },
+    {
+      "transaction_id": "TX000002",
+      "date": "2026-11-17",
+      "timestamp": "2026-11-17T00:00:00-05:00",
+      "ticker": "GRID",
+      "side": "BUY",
+      "quantity": 19.33612707,
+      "reference_price": 155.149994,
+      "fill_price": 155.149994,
+      "notional": 3000.0,
+      "fee": 0.0,
+      "slippage_bps": 0.0,
+      "reason": "Initial target allocation",
+      "source": "Yahoo Finance via yfinance",
+      "realized_pnl": 0.0
+    },
+    {
+      "transaction_id": "TX000003",
+      "date": "2026-11-17",
+      "timestamp": "2026-11-17T00:00:00-05:00",
+      "ticker": "UTES",
+      "side": "BUY",
+      "quantity": 26.32618104,
+      "reference_price": 75.970001,
+      "fill_price": 75.970001,
+      "notional": 2000.0,
+      "fee": 0.0,
+      "slippage_bps": 0.0,
+      "reason": "Initial target allocation",
+      "source": "Yahoo Finance via yfinance",
+      "realized_pnl": 0.0
+    }
+  ],
+  "snapshots": [],
+  "realized_pnl": 0.0,
+  "fees_paid": 0.0
+}
