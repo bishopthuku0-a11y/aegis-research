@@ -5,7 +5,6 @@
     "UTES": 0.2
   },
   "lessons_learned": [
-    "Scrutinize policy and hyperscaler capex shifts simultaneously, as political mandates shifting grid interconnection costs directly impact smart-grid equipment valuations before hitting regulated utilities.",
     "When bipartisan policy explicitly targets hyperscaler infrastructure subsidies, immediately derate high-multiple grid equipment suppliers ahead of capex order book revisions.",
     "Avoid extreme sector concentration unless volatility-adjusted returns exceed the risk of a correlated industry-wide policy shift.",
     "Avoid 100% sector concentration unless holding assets with non-correlated regulatory or macro sensitivities.",
@@ -16,7 +15,8 @@
     "High-beta thematic exposure must be the first position liquidated when sector concentration mandates are exceeded.",
     "Structural diversification is not an option; it is the primary risk-mitigation tool against unforeseen sector-specific regulatory or macro shocks.",
     "When portfolio concentration reaches 100% in a single sector, you are no longer investing; you are speculating on a single macro narrative.",
-    "When sectoral concentration violates risk mandates, liquidity must be prioritized regardless of the strength of the underlying thematic narrative."
+    "When sectoral concentration violates risk mandates, liquidity must be prioritized regardless of the strength of the underlying thematic narrative.",
+    "When concentration limits are breached, reduce high-beta positions immediately to restore portfolio equilibrium, regardless of the underlying secular thesis."
   ],
   "past_pitches": [
     {
