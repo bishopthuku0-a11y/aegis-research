@@ -44,20 +44,27 @@ def load_memory(path: str | os.PathLike = MEMORY_FILE) -> dict:
     file_path = Path(path)
     if not file_path.exists():
         raise FileNotFoundError(f"{file_path} was not found.")
+
     with file_path.open("r", encoding="utf-8") as handle:
         memory = json.load(handle)
+
     if not isinstance(memory, dict):
         raise ValueError("Memory must be a JSON object.")
+
     portfolio = memory.get("portfolio")
     if not isinstance(portfolio, dict):
         raise ValueError("Memory is missing a portfolio object.")
+
     validate_portfolio_weights(portfolio)
+
     memory.setdefault("past_pitches", [])
     memory.setdefault("lessons_learned", [])
+
     if not isinstance(memory["past_pitches"], list):
         raise ValueError("past_pitches must be a list.")
     if not isinstance(memory["lessons_learned"], list):
         raise ValueError("lessons_learned must be a list.")
+
     return memory
 
 
@@ -65,15 +72,27 @@ def save_json_atomic(data: Any, filename: str | os.PathLike) -> None:
     """Atomically save JSON. Research run does not call this for memory/ledger."""
     destination = Path(filename)
     destination.parent.mkdir(parents=True, exist_ok=True)
+
     fd, temporary = tempfile.mkstemp(
-        dir=str(destination.parent), prefix=f".{destination.name}.", suffix=".tmp"
+        dir=str(destination.parent),
+        prefix=f".{destination.name}.",
+        suffix=".tmp",
     )
+
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(data, handle, indent=2, ensure_ascii=False, allow_nan=False)
+            json.dump(
+                data,
+                handle,
+                indent=2,
+                ensure_ascii=False,
+                allow_nan=False,
+            )
             handle.flush()
             os.fsync(handle.fileno())
+
         os.replace(temporary, destination)
+
     finally:
         if os.path.exists(temporary):
             os.remove(temporary)
@@ -86,53 +105,82 @@ def get_market_data(
 ) -> dict:
     """Fetch the latest timestamped daily close; reject missing/stale data."""
     symbol = str(ticker).strip().upper()
+
     if symbol not in ALLOWED_TICKERS:
         raise DataIntegrityError(
             f"{symbol or 'EMPTY TICKER'} is outside the approved portfolio universe."
         )
+
     current_time = _utc(now or dt.datetime.now(dt.timezone.utc))
 
     try:
         history = yf.Ticker(symbol).history(
-            period="10d", interval="1d", auto_adjust=False, actions=False
+            period="10d",
+            interval="1d",
+            auto_adjust=False,
+            actions=False,
         )
     except Exception as exc:
-        raise DataIntegrityError(f"Could not retrieve {symbol} history: {exc}") from exc
+        raise DataIntegrityError(
+            f"Could not retrieve {symbol} history: {exc}"
+        ) from exc
 
     if history is None or getattr(history, "empty", True):
-        raise DataIntegrityError(f"No daily price history returned for {symbol}.")
+        raise DataIntegrityError(
+            f"No daily price history returned for {symbol}."
+        )
+
     if "Close" not in history.columns:
         raise DataIntegrityError(f"Daily close is missing for {symbol}.")
 
     try:
         rows = history.dropna(subset=["Close"])
+
         if rows.empty:
-            raise DataIntegrityError(f"No valid daily close returned for {symbol}.")
+            raise DataIntegrityError(
+                f"No valid daily close returned for {symbol}."
+            )
+
         timestamp = rows.index[-1]
+
+        # Reject timezone-naive timestamps before converting Pandas Timestamp
+        # objects to ordinary Python datetime objects.
         if getattr(timestamp, "tzinfo", None) is None:
-            raise DataIntegrityError(f"{symbol} daily timestamp has no timezone.")
+            raise DataIntegrityError(
+                f"{symbol} daily timestamp has no timezone."
+            )
+
         if hasattr(timestamp, "to_pydatetime"):
-    timestamp = timestamp.to_pydatetime()
+            timestamp = timestamp.to_pydatetime()
 
-        if timestamp.tzinfo is None:
-    raise DataIntegrityError(
-        f"{symbol} daily timestamp has no timezone."
-    )
+        # Works with both pandas.Timestamp and datetime.datetime.
+        price_as_of = timestamp.astimezone(dt.timezone.utc)
 
-price_as_of = timestamp.astimezone(dt.timezone.utc)
         age = current_time - price_as_of
+
         if age.total_seconds() < -86400:
-            raise DataIntegrityError(f"{symbol} price timestamp is in the future.")
+            raise DataIntegrityError(
+                f"{symbol} price timestamp is in the future."
+            )
+
         if age > dt.timedelta(days=max_age_days):
-            raise DataIntegrityError(f"{symbol} daily close is stale ({age.days} days old).")
+            raise DataIntegrityError(
+                f"{symbol} daily close is stale ({age.days} days old)."
+            )
+
         price = float(rows["Close"].iloc[-1])
+
     except DataIntegrityError:
         raise
     except Exception as exc:
-        raise DataIntegrityError(f"Could not validate {symbol} daily close: {exc}") from exc
+        raise DataIntegrityError(
+            f"Could not validate {symbol} daily close: {exc}"
+        ) from exc
 
     if not math.isfinite(price) or price <= 0:
-        raise DataIntegrityError(f"{symbol} close is not a positive finite number.")
+        raise DataIntegrityError(
+            f"{symbol} close is not a positive finite number."
+        )
 
     return {
         "ticker": symbol,
@@ -149,36 +197,54 @@ def collect_portfolio_snapshot(
 ) -> dict:
     """Require valid, recent daily closes for all three portfolio ETFs."""
     validate_portfolio_weights(portfolio)
+
     snapshot = {}
     errors = []
+
     for ticker in ALLOWED_TICKERS:
         try:
             snapshot[ticker] = get_market_data(ticker, now=now)
         except Exception as exc:
             errors.append(f"{ticker}: {exc}")
+
     if errors:
         raise DataIntegrityError(
-            "Portfolio snapshot incomplete; AI analysis blocked. " + " | ".join(errors)
+            "Portfolio snapshot incomplete; AI analysis blocked. "
+            + " | ".join(errors)
         )
+
     return snapshot
 
 
 def _get_client(client=None):
+    """Create the Gemini client only when a research run actually needs it."""
     if client is not None:
         return client
+
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        raise RuntimeError("GEMINI_API_KEY is missing from environment variables.")
+        raise RuntimeError(
+            "GEMINI_API_KEY is missing from environment variables."
+        )
+
     try:
         from google import genai
     except ImportError as exc:
-        raise RuntimeError("google-genai is not installed.") from exc
+        raise RuntimeError(
+            "google-genai is not installed."
+        ) from exc
+
     return genai.Client(api_key=api_key)
 
 
-def ask_aegis(prompt_text: str, client=None, model: str = DEFAULT_MODEL) -> str:
+def ask_aegis(
+    prompt_text: str,
+    client=None,
+    model: str = DEFAULT_MODEL,
+) -> str:
     """Ask Gemini for one schema-constrained research decision."""
     active_client = _get_client(client)
+
     response = active_client.models.generate_content(
         model=model,
         contents=prompt_text,
@@ -187,13 +253,21 @@ def ask_aegis(prompt_text: str, client=None, model: str = DEFAULT_MODEL) -> str:
             "response_schema": RESEARCH_DECISION_SCHEMA,
         },
     )
+
     response_text = getattr(response, "text", None)
+
     if not response_text:
         raise RuntimeError("Gemini returned an empty response.")
+
     return response_text
 
 
-def build_prompt(memory: dict, snapshot: dict, today: dt.date) -> str:
+def build_prompt(
+    memory: dict,
+    snapshot: dict,
+    today: dt.date,
+) -> str:
+    """Build a research prompt constrained by the approved investment mandate."""
     from investment_mandate import mandate_prompt_text
 
     return f"""
@@ -252,15 +326,39 @@ def run(
 
     try:
         memory = load_memory(memory_file)
-        snapshot = collect_portfolio_snapshot(memory["portfolio"], now=run_time)
-        prompt = build_prompt(memory, snapshot, run_time.date())
-        raw_result = ask_aegis(prompt, client=client)
-        parsed = parse_research_decision(raw_result)
-        parsed_payload = parsed.to_dict() if hasattr(parsed, "to_dict") else parsed
-        validated = validate_decision(parsed_payload)
-        decision = validated.to_dict() if hasattr(validated, "to_dict") else dict(validated)
 
-        # Persist only the validated research decision, in its own file.
+        snapshot = collect_portfolio_snapshot(
+            memory["portfolio"],
+            now=run_time,
+        )
+
+        prompt = build_prompt(
+            memory,
+            snapshot,
+            run_time.date(),
+        )
+
+        raw_result = ask_aegis(
+            prompt,
+            client=client,
+        )
+
+        parsed = parse_research_decision(raw_result)
+        parsed_payload = (
+            parsed.to_dict()
+            if hasattr(parsed, "to_dict")
+            else parsed
+        )
+
+        validated = validate_decision(parsed_payload)
+        decision = (
+            validated.to_dict()
+            if hasattr(validated, "to_dict")
+            else dict(validated)
+        )
+
+        # Persist only the validated research decision in its own file.
+        # memory.json and simulation_ledger.json remain untouched.
         save_json_atomic(decision, decision_file)
 
         snapshot_lines = [
@@ -268,6 +366,7 @@ def run(
             f"(daily close as of {item['price_as_of']})"
             for ticker, item in snapshot.items()
         ]
+
         report = (
             "# AEGIS RESEARCH // DAILY BRIEFING\n\n"
             f"Run time: {run_time.isoformat()}\n\n"
@@ -279,14 +378,20 @@ def run(
             + "\n```\n\n"
             + "**Execution status:** Research only. No paper order was placed.\n"
         )
+
         briefing_file.parent.mkdir(parents=True, exist_ok=True)
         briefing_file.write_text(report, encoding="utf-8")
+
         print("Aegis research completed. No paper trade was executed.")
         return 0
 
     except Exception as exc:
         briefing_file.parent.mkdir(parents=True, exist_ok=True)
-        briefing_file.write_text(_failure_report(str(exc), run_time), encoding="utf-8")
+        briefing_file.write_text(
+            _failure_report(str(exc), run_time),
+            encoding="utf-8",
+        )
+
         print(f"AEGIS DATA FAILURE: {exc}")
         return 2
 
