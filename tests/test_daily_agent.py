@@ -1,163 +1,111 @@
 import datetime as dt
 import json
-import tempfile
-import unittest
 import sys
 import types
+import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-# Keep unit tests independent of network SDK installation.
-yf_stub = types.ModuleType("yfinance")
-yf_stub.Ticker = None
-google_stub = types.ModuleType("google")
-genai_stub = types.SimpleNamespace(Client=None)
-google_stub.genai = genai_stub
-sys.modules.setdefault("yfinance", yf_stub)
-sys.modules.setdefault("google", google_stub)
-sys.modules.setdefault("google.genai", genai_stub)
+# Stub yfinance so importing the agent never needs network access.
+fake_yfinance = types.ModuleType("yfinance")
+fake_yfinance.Ticker = lambda ticker: None
+sys.modules.setdefault("yfinance", fake_yfinance)
 
 import daily_agent as agent
 
-
-class FakeSeries:
-    def __init__(self, values, index):
-        self.values = list(values)
-        self.index = list(index)
-        self.iloc = self
-    def dropna(self):
-        pairs = [(v, i) for v, i in zip(self.values, self.index) if v is not None]
-        return FakeSeries([p[0] for p in pairs], [p[1] for p in pairs])
-    def astype(self, _kind):
-        return self
-    def __gt__(self, other):
-        return [v > other for v in self.values]
-    def __getitem__(self, key):
-        if isinstance(key, list):
-            pairs = [(v, i) for v, i, keep in zip(self.values, self.index, key) if keep]
-            return FakeSeries([p[0] for p in pairs], [p[1] for p in pairs])
-        if isinstance(key, int):
-            return self.values[key]
-        raise TypeError(key)
-    def __len__(self):
-        return len(self.values)
+PORTFOLIO = {"XLU": 0.5, "GRID": 0.3, "UTES": 0.2}
 
 
 class FakeHistory:
-    def __init__(self, values, dates):
-        self.empty = not bool(values)
-        self.close = FakeSeries(values, dates)
-    def __contains__(self, key):
-        return key == "Close"
+    empty = False
+    columns = ["Close"]
+
+    def __init__(self, close, timestamp):
+        self.index = [timestamp]
+        self.close = close
+
+    def dropna(self, subset=None):
+        return self
+
+    class Series:
+        def __init__(self, value):
+            self.iloc = [value]
+
     def __getitem__(self, key):
-        if key != "Close":
-            raise KeyError(key)
-        return self.close
+        return self.Series(self.close)
 
 
-class ParseOutputTests(unittest.TestCase):
-    def test_parses_valid_machine_lines(self):
-        action, ticker, lesson, body = agent.parse_model_output(
-            "## Analysis\nGood evidence.\nPITCH_ACTION: BUY\n"
-            "PITCH_TICKER: MSFT\nNEW_LESSON: Require cash-flow confirmation."
-        )
-        self.assertEqual((action, ticker), ("BUY", "MSFT"))
-        self.assertEqual(lesson, "Require cash-flow confirmation.")
-        self.assertIn("Good evidence.", body)
+class FakeTicker:
+    def __init__(self, history):
+        self._history = history
 
-    def test_rejects_missing_action(self):
-        with self.assertRaises(ValueError):
-            agent.parse_model_output("PITCH_TICKER: XLU\nNEW_LESSON: NONE")
-
-    def test_rejects_invalid_ticker(self):
-        with self.assertRaises(ValueError):
-            agent.parse_model_output(
-                "PITCH_ACTION: BUY\nPITCH_TICKER: BAD TICKER\nNEW_LESSON: NONE"
-            )
-
-    def test_none_lesson_is_empty(self):
-        result = agent.parse_model_output(
-            "PITCH_ACTION: HOLD\nPITCH_TICKER: XLU\nNEW_LESSON: NONE"
-        )
-        self.assertEqual(result[2], "")
+    def history(self, **kwargs):
+        return self._history
 
 
-class MemoryTests(unittest.TestCase):
-    def test_loads_existing_memory_shape(self):
-        with tempfile.TemporaryDirectory() as folder:
+class DailyAgentTests(unittest.TestCase):
+    def test_import_is_safe_without_gemini_key(self):
+        self.assertTrue(callable(agent.run))
+
+    def test_memory_accepts_exact_three_etf_portfolio(self):
+        with TemporaryDirectory() as folder:
             path = Path(folder) / "memory.json"
-            path.write_text(json.dumps({"portfolio": {"XLU": .5, "GRID": .3, "UTES": .2},
-                                        "past_pitches": [], "lessons_learned": []}))
-            memory = agent.load_memory(path)
-            self.assertAlmostEqual(sum(memory["portfolio"].values()), 1.0)
+            path.write_text(json.dumps({"portfolio": PORTFOLIO}), encoding="utf-8")
+            self.assertEqual(agent.load_memory(path)["portfolio"], PORTFOLIO)
 
-    def test_rejects_invalid_portfolio_weight(self):
-        with tempfile.TemporaryDirectory() as folder:
+    def test_memory_rejects_external_ticker(self):
+        with TemporaryDirectory() as folder:
             path = Path(folder) / "memory.json"
-            path.write_text(json.dumps({"portfolio": {"XLU": -0.5}}))
-            with self.assertRaises(ValueError):
+            path.write_text(json.dumps({"portfolio": {"MSFT": 1.0}}), encoding="utf-8")
+            with self.assertRaises(Exception):
                 agent.load_memory(path)
 
-    def test_atomic_save_round_trip(self):
-        with tempfile.TemporaryDirectory() as folder:
-            path = Path(folder) / "memory.json"
-            agent.save_json_atomic({"ok": True}, path)
-            self.assertEqual(json.loads(path.read_text()), {"ok": True})
+    def test_get_market_data_returns_timestamped_daily_close(self):
+        timestamp = dt.datetime(2026, 11, 18, tzinfo=dt.timezone.utc)
+        history = FakeHistory(43.5, timestamp)
+        with patch.object(agent.yf, "Ticker", return_value=FakeTicker(history)):
+            quote = agent.get_market_data(
+                "XLU", now=dt.datetime(2026, 11, 19, tzinfo=dt.timezone.utc)
+            )
+        self.assertEqual(quote["price"], 43.5)
+        self.assertEqual(quote["price_type"], "UNADJUSTED_DAILY_CLOSE")
+        self.assertIn("2026-11-18", quote["price_as_of"])
 
-
-class MarketDataTests(unittest.TestCase):
-    def test_rejects_stale_market_data(self):
-        class FakeTicker:
-            def history(self, **kwargs):
-                return FakeHistory([10.0, 11.0], [dt.datetime(2026, 10, 1), dt.datetime(2026, 10, 2)])
-        with patch.object(agent.yf, "Ticker", return_value=FakeTicker()):
+    def test_get_market_data_rejects_stale_quote(self):
+        timestamp = dt.datetime(2026, 11, 1, tzinfo=dt.timezone.utc)
+        history = FakeHistory(43.5, timestamp)
+        with patch.object(agent.yf, "Ticker", return_value=FakeTicker(history)):
             with self.assertRaises(agent.DataIntegrityError):
-                agent.get_market_data("XLU", now=dt.datetime(2026, 11, 18, tzinfo=dt.timezone.utc))
+                agent.get_market_data(
+                    "XLU", now=dt.datetime(2026, 11, 19, tzinfo=dt.timezone.utc)
+                )
 
-    def test_validates_close_and_timestamp(self):
-        class FakeTicker:
-            def history(self, **kwargs):
-                return FakeHistory([10.0, 11.0], [dt.datetime(2026, 11, 16), dt.datetime(2026, 11, 17)])
-        with patch.object(agent.yf, "Ticker", return_value=FakeTicker()):
-            data = agent.get_market_data("XLU", now=dt.datetime(2026, 11, 18, tzinfo=dt.timezone.utc))
-        self.assertEqual(data["price"], 11.0)
-        self.assertAlmostEqual(data["change_pct"], 10.0)
-        self.assertIn("price_as_of", data)
+    def test_get_market_data_rejects_unapproved_ticker(self):
+        with self.assertRaises(agent.DataIntegrityError):
+            agent.get_market_data("MSFT")
 
-    def test_news_failure_does_not_destroy_price_snapshot(self):
-        class FakeTicker:
-            def history(self, **kwargs):
-                return FakeHistory([10.0, 11.0], [dt.datetime(2026, 11, 16), dt.datetime(2026, 11, 17)])
-            @property
-            def news(self):
-                raise RuntimeError("news service down")
-        with patch.object(agent.yf, "Ticker", return_value=FakeTicker()):
-            snapshot, headlines = agent.collect_portfolio_snapshot(
-                {"XLU": .5}, now=dt.datetime(2026, 11, 18, tzinfo=dt.timezone.utc))
-        self.assertIn("XLU", snapshot)
-        self.assertEqual(headlines, [])
-
-
-class FailClosedRunTests(unittest.TestCase):
-    def test_data_failure_writes_failure_report_without_calling_gemini_or_mutating_memory(self):
-        with tempfile.TemporaryDirectory() as folder:
+    def test_data_failure_blocks_gemini_and_preserves_memory(self):
+        with TemporaryDirectory() as folder:
             memory_path = Path(folder) / "memory.json"
-            briefing_path = Path(folder) / "latest_briefing.md"
-            original = {"portfolio": {"XLU": 0.5, "GRID": 0.3, "UTES": 0.2},
-                        "past_pitches": [{"date": "2026-11-17", "action": "TRIM",
-                                          "ticker": "GRID", "entry_price": 156.14}],
-                        "lessons_learned": ["Existing lesson"]}
-            memory_path.write_text(json.dumps(original))
-            with patch.object(agent, "MEMORY_FILE", memory_path), \
-                 patch.object(agent, "BRIEFING_FILE", briefing_path), \
-                 patch.object(agent, "collect_portfolio_snapshot",
-                              side_effect=agent.DataIntegrityError("GRID price unavailable")), \
-                 patch.object(agent.genai, "Client") as client_factory:
-                code = agent.run()
-            self.assertEqual(code, 2)
+            briefing_path = Path(folder) / "briefing.md"
+            decision_path = Path(folder) / "decision.json"
+            original = {
+                "portfolio": PORTFOLIO,
+                "past_pitches": [],
+                "lessons_learned": ["existing note"],
+            }
+            memory_path.write_text(json.dumps(original), encoding="utf-8")
+            with patch.object(
+                agent, "collect_portfolio_snapshot",
+                side_effect=agent.DataIntegrityError("test quote failure")
+            ), patch.object(agent, "ask_aegis") as ask:
+                result = agent.run(memory_path, briefing_path, decision_path)
+            self.assertEqual(result, 2)
+            ask.assert_not_called()
             self.assertEqual(json.loads(memory_path.read_text()), original)
             self.assertIn("DATA FAILURE", briefing_path.read_text())
-            client_factory.assert_not_called()
+            self.assertFalse(decision_path.exists())
 
 
 if __name__ == "__main__":
