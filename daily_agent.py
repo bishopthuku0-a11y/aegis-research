@@ -111,7 +111,15 @@ def get_market_data(
         timestamp = rows.index[-1]
         if getattr(timestamp, "tzinfo", None) is None:
             raise DataIntegrityError(f"{symbol} daily timestamp has no timezone.")
-        price_as_of = timestamp.to_pydatetime().astimezone(dt.timezone.utc)
+        if hasattr(timestamp, "to_pydatetime"):
+    timestamp = timestamp.to_pydatetime()
+
+        if timestamp.tzinfo is None:
+    raise DataIntegrityError(
+        f"{symbol} daily timestamp has no timezone."
+    )
+
+price_as_of = timestamp.astimezone(dt.timezone.utc)
         age = current_time - price_as_of
         if age.total_seconds() < -86400:
             raise DataIntegrityError(f"{symbol} price timestamp is in the future.")
