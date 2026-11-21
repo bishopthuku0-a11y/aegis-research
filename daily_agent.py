@@ -26,7 +26,7 @@ MEMORY_FILE = "memory.json"
 BRIEFING_FILE = "latest_briefing.md"
 DECISION_FILE = "latest_research_decision.json"
 MAX_MARKET_DATA_AGE_DAYS = 5
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3.8-flash"
 
 
 class DataIntegrityError(RuntimeError):
