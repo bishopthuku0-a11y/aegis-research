@@ -34,7 +34,7 @@ MAX_LIST_ITEMS = 20
 RESEARCH_DECISION_SCHEMA = {
     "type": "OBJECT",
     "properties": {
-        "schema_version": {"type": "INTEGER", "enum": [SCHEMA_VERSION]},
+        "schema_version": {"type": "INTEGER"},
         "action": {"type": "STRING", "enum": ["BUY", "TRIM", "HOLD", "NO_DECISION"]},
         "ticker": {"type": "STRING", "enum": ["XLU", "GRID", "UTES"], "nullable": True},
         "reasoning": {"type": "STRING"},
