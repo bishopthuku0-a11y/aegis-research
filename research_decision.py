@@ -49,7 +49,6 @@ RESEARCH_DECISION_SCHEMA = {
                     "as_of": {"type": "STRING"},
                     "evidence_type": {"type": "STRING", "enum": sorted(VALID_EVIDENCE_TYPES)},
                 },
-                "additionalProperties": False,
                 "required": ["claim", "source", "as_of", "evidence_type"],
             },
         },
@@ -57,7 +56,6 @@ RESEARCH_DECISION_SCHEMA = {
         "missing_information": {"type": "ARRAY", "items": {"type": "STRING"}},
         "proposed_lesson": {"type": "STRING", "nullable": True},
     },
-    "additionalProperties": False,
     "required": [
         "schema_version", "action", "ticker", "reasoning", "risks",
         "evidence", "confidence", "missing_information", "proposed_lesson",
