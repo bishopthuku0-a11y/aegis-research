@@ -1,29 +1,35 @@
-# 🛡️ Aegis Research Daily Briefing (2026-11-19 05:50 UTC)
+# AEGIS RESEARCH // DAILY BRIEFING
 
-# 🛡️ AEGIS RESEARCH // DAILY BRIEFING
+Run time: 2026-11-24T05:47:43.794743+00:00
 
-## Self-Audit & Track Record
-As a new analytical unit, Aegis Research has no established track record. Our initial "Lessons Learned" serve as the framework for this audit. Current portfolio positioning—comprised 100% of the Utilities and Grid infrastructure sector (XLU, GRID, UTES)—is in direct violation of our core mandate: *“Never allow single-sector concentration to exceed 50% of the total portfolio value.”* This self-audit identifies the current portfolio as a speculative posture rather than an investment strategy. We have failed the fundamental test of structural diversification.
+## Verified market snapshot
 
-## Portfolio Pulse
-*   **Sector Exposure:** 100% Utilities/Grid Infrastructure (XLU 50%, GRID 30%, UTES 20%).
-*   **Market Data:** Live pricing and news feed are currently unavailable.
-*   **Risk Profile:** The portfolio is hyper-concentrated. It is highly sensitive to interest rate fluctuations (duration risk inherent in utilities) and regulatory/policy shifts regarding AI-driven data center energy demand.
-*   **Implications:** Without diversification, the portfolio is vulnerable to a "black swan" event, such as a major grid-regulation overhaul or an abrupt cooling of hyperscaler capex, which would impact both the utilities (XLU) and the equipment suppliers (GRID, UTES) simultaneously. We are currently over-exposed to a single macro narrative.
+- **XLU:** $43.32 (daily close as of 2026-11-23T05:00:00+00:00)
+- **GRID:** $154.34 (daily close as of 2026-11-23T05:00:00+00:00)
+- **UTES:** $75.85 (daily close as of 2026-11-23T05:00:00+00:00)
 
-## Bull vs Bear Debate
-**The Bullish Case:** The "Electrification of Everything" remains a secular tailwind. The exponential demand for power from data centers, coupled with the aging of the North American grid, necessitates a multi-year supercycle in capital expenditure for both grid modernization and utility base-load expansion.
+## Validated research decision
 
-**The Bearish Case:** The sector is currently priced for perfection. Any delay in interconnection queues, regulatory pushback on utility rate increases, or a cyclical contraction in hyperscaler cloud spending will cause a sharp derating of multiples. High interest rates continue to pressure capital-intensive utilities, and equipment suppliers face supply-chain bottlenecks and labor shortages that could erode margins.
+```json
+{
+  "schema_version": 1,
+  "action": "NO_DECISION",
+  "ticker": null,
+  "reasoning": "The provided inputs contain only unadjusted daily closing prices for XLU, GRID, and UTES as of 2026-11-23, along with a historical research call from 2026-11-17. No fundamental data, valuation metrics, earnings reports, regulatory updates, or macro context were provided. Price observations alone without underlying fundamental, policy, or order-book data do not provide an evidentiary basis to execute a BUY, TRIM, or HOLD under the Aegis mandate.",
+  "risks": [
+    "Trading solely on raw price snapshot data risks reacting to uncontextualized market noise without fundamental backing.",
+    "Lack of visibility into interest rates, utility capex trends, or grid equipment backlog leaves thematic exposure unhedged against systemic policy or macro shocks."
+  ],
+  "evidence": [],
+  "confidence": 0.0,
+  "missing_information": [
+    "Current fundamental valuation multiples and earnings revisions for XLU, GRID, and UTES.",
+    "Data centre power demand and utility interconnection policy updates.",
+    "Interest rate and financing conditions impacting capital-intensive utility and infrastructure projects.",
+    "Grid modernization and smart-grid equipment order book and backlog changes."
+  ],
+  "proposed_lesson": null
+}
+```
 
-**Challenge:** The Bullish case ignores the risk of policy fatigue—where political pressure limits the ability of utilities to pass infrastructure costs to consumers. The Bearish case ignores the reality that energy supply is a national security imperative, making grid investment largely immune to standard cyclical economic downturns.
-
-## Proactive Investment Pitch
-The portfolio is currently in violation of our risk mandate (concentration > 50%). We are not investing; we are speculating. We must prioritize liquidity and diversification to mitigate systemic sector risk.
-
-**TRIM GRID**
-
-We trim GRID to reduce high-beta exposure, as thematic equipment suppliers are the first to suffer when capex cycles shift or regulatory hurdles delay project implementation. This move begins the process of rebalancing toward a diversified risk profile.
-
-## Lessons & Strategy Update
-Diversification is not a secondary goal; it is the fundamental constraint on all thematic conviction. When thematic exposure violates concentration mandates, liquidation is mandatory regardless of the macro narrative.
+**Execution status:** Research only. No paper order was placed.
